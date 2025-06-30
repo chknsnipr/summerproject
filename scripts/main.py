@@ -2,6 +2,7 @@ import pygame
 from scripts.player import Player
 from scripts.enemy import Enemy
 from scripts.wave_manager import WaveManager
+from scripts.game_state import player_speed
 
 pygame.init()
 WIDTH, HEIGHT = 800, 600
@@ -19,9 +20,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-    keys = pygame.key.get_pressed()
-    player.move(keys)
+    player.update(player_speed["value"], screen)
     player.draw(screen)
 
     wave_manager.update(player, screen)
