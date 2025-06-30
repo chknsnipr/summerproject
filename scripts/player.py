@@ -1,4 +1,5 @@
 import pygame
+import main
 
 class Player:
     def __init__(self, x, y):
@@ -14,3 +15,4 @@ class Player:
 
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self.rect)
+    

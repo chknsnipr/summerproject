@@ -3,7 +3,7 @@ import random
 
 class Enemy:
     def __init__(self, x, y, speed):
-        self.rect = pygame.Rect(x, y, 30, 30)
+        self.rect = pygame.Rect(x, y, 12, 12)
         self.color = (255, 0, 0)
         self.speed = speed
 
