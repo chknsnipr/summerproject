@@ -5,7 +5,7 @@ class Enemy:
     def __init__(self, x, y, speed):
         self.rect = pygame.Rect(x, y, 12, 12)
         self.color = (255, 0, 0)
-        self.speed = speed
+        self.speed = speed - .4
 
     def update(self, player):
         dx = player.rect.centerx - self.rect.centerx
