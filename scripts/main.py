@@ -1,39 +1,43 @@
 import pygame
 from scripts.player import Player
-from scripts.enemy import Enemy
 from scripts.wave_manager import WaveManager
 from scripts.game_state import player_speed
-from scripts.bullet import Bullet
+
+# Initialize Pygame
 pygame.init()
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("2D Top-Down Wave Shooter")
 clock = pygame.time.Clock()
 
+# Game objects
 player = Player(400, 300)
+player.trigger_explosion = False  # ✅ Required for explosion to work
 wave_manager = WaveManager()
 
+# Fonts for text
+font = pygame.font.SysFont(None, 64)
+
+# Main loop
 running = True
 while running:
-    clock.tick(60)
-    screen.fill((30, 30, 30))
+    screen.fill((30, 30, 30))  # Background color
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    player.update(player_speed["value"], screen)
-    player.draw(screen)
+    if not wave_manager.game_over:
+        player.update(player_speed["value"], screen)
+        player.draw(screen)
+        wave_manager.update(player, screen)
 
-    wave_manager.update(player, screen)
-
-    # 🧪 TEST BULLET ON FIRST ENEMY
-    if wave_manager.enemies and not hasattr(player, "test_bullet_spawned"):
-        enemy = wave_manager.enemies[0]
-        print("Injecting test bullet on enemy position")
-        player.bullets.append(Bullet(enemy.rect.x, enemy.rect.y, (1, 0)))
-
-        player.test_bullet_spawned = True
+    else:
+        # Show Game Over screen
+        text = font.render("GAME OVER", True, (255, 0, 0))
+        screen.blit(text, (250, 250))
 
     pygame.display.flip()
+    clock.tick(60)
 
 pygame.quit()
+
