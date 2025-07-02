@@ -6,6 +6,7 @@ class Player:
         self.rect = pygame.Rect(x, y, 32, 32)
         self.color = (0, 255, 0)
         self.bullets = []
+        self.health=3
         self.shoot_cooldown = 1  # prevent too-fast shooting
 
     def handle_input(self, speed):
