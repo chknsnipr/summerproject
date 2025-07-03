@@ -11,33 +11,60 @@ clock = pygame.time.Clock()
 
 # Game objects
 player = Player(400, 300)
-player.trigger_explosion = False  # ✅ Required for explosion to work
+player.trigger_explosion = False
 wave_manager = WaveManager()
 
-# Fonts for text
-font = pygame.font.SysFont(None, 64)
+# Fonts
+big_font = pygame.font.SysFont(None, 64)
+ui_font = pygame.font.SysFont("Arial", 24)
 
-# Main loop
 running = True
 while running:
-    screen.fill((30, 30, 30))  # Background color
-
+    screen.fill((30, 30, 30))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    if not wave_manager.game_over:
+        # Weapon prompt active - wait for key release
+        if wave_manager.awaiting_weapon_choice and not wave_manager.weapon_prompt_ready:
+            if event.type == pygame.KEYUP:
+                if event.key in (pygame.K_y, pygame.K_n):
+                    wave_manager.weapon_prompt_ready = True
+
+        # Prompt ready - now accept only Y or N
+        elif wave_manager.awaiting_weapon_choice and wave_manager.weapon_prompt_ready:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_y:
+                    player.weapon = wave_manager.weapon_offer
+                    print(f"✅ Player accepted: {player.weapon}")
+                    wave_manager.awaiting_weapon_choice = False
+                    wave_manager.weapon_prompt_ready = False
+                elif event.key == pygame.K_n:
+                    print("⛔ Player declined weapon.")
+                    wave_manager.awaiting_weapon_choice = False
+                    wave_manager.weapon_prompt_ready = False
+
+
+
+    if not wave_manager.game_over and not wave_manager.awaiting_weapon_choice:
         player.update(player_speed["value"], screen)
         player.draw(screen)
         wave_manager.update(player, screen)
 
+        wave_text = ui_font.render(f"Wave: {wave_manager.wave}", True, (255, 255, 255))
+        screen.blit(wave_text, (800 - wave_text.get_width() - 10, 10))
+    elif wave_manager.awaiting_weapon_choice:
+        pause_text = big_font.render("New Weapon Found!", True, (255, 255, 0))
+        instr1 = ui_font.render(f"Use {wave_manager.weapon_offer.upper()}?", True, (255, 255, 255))
+        instr2 = ui_font.render("Press Y to Accept, N to Decline", True, (200, 200, 200))
+        screen.blit(pause_text, (200, 200))
+        screen.blit(instr1, (200, 270))
+        screen.blit(instr2, (200, 310))
     else:
-        # Show Game Over screen
-        text = font.render("GAME OVER", True, (255, 0, 0))
+        text = big_font.render("GAME OVER", True, (255, 0, 0))
         screen.blit(text, (250, 250))
 
     pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
-
