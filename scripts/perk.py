@@ -70,5 +70,6 @@ class Perk:
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
 
+
     def expired(self):
         return pygame.time.get_ticks() - self.spawn_time > 7000

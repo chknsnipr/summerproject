@@ -23,13 +23,13 @@ class Shotgun(Weapon):
     def shoot(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE] and self.cooldown <= 0:
-            for i in range(5):  # Spread
-                angle = random.uniform(-0.3, 0.3)
+            for i in range(5): 
+                angle = random.uniform(-0.6, 0.6)
                 dir_x, dir_y = (0, -1)
                 rotated = pygame.math.Vector2(dir_x, dir_y).rotate_rad(angle)
                 bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, rotated, speed=5, range=60, damage=.65)
                 self.player.bullets.append(bullet)
-            self.cooldown = 25
+            self.cooldown = 40
 
 
 class Sniper(Weapon):
@@ -41,7 +41,7 @@ class Sniper(Weapon):
         if keys[pygame.K_SPACE] and self.cooldown <= 0:
             bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, (0, -1), speed=15, range=800, damage=8)
             self.player.bullets.append(bullet)
-            self.cooldown = 50  # Longer delay
+            self.cooldown = 60  # Longer delay
 
 
 class SMG(Weapon):
@@ -53,4 +53,4 @@ class SMG(Weapon):
         if keys[pygame.K_SPACE] and self.cooldown <= 0:
             bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, (0, -1), speed=6, range=200, damage=0.4)
             self.player.bullets.append(bullet)
-            self.cooldown = 5  # Very fast
+            self.cooldown = 4  # Very fast

@@ -1,3 +1,4 @@
+
 import pygame
 from scripts.player import Player
 from scripts.wave_manager import WaveManager
@@ -13,6 +14,7 @@ clock = pygame.time.Clock()
 player = Player(400, 300)
 player.trigger_explosion = False
 wave_manager = WaveManager()
+enemy_bullets = []
 
 # Fonts
 big_font = pygame.font.SysFont(None, 64)
@@ -25,31 +27,32 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        # Weapon prompt active - wait for key release
         if wave_manager.awaiting_weapon_choice and not wave_manager.weapon_prompt_ready:
             if event.type == pygame.KEYUP:
                 if event.key in (pygame.K_y, pygame.K_n):
                     wave_manager.weapon_prompt_ready = True
-
-        # Prompt ready - now accept only Y or N
         elif wave_manager.awaiting_weapon_choice and wave_manager.weapon_prompt_ready:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_y:
                     player.weapon = wave_manager.weapon_offer
-                    print(f"✅ Player accepted: {player.weapon}")
                     wave_manager.awaiting_weapon_choice = False
                     wave_manager.weapon_prompt_ready = False
                 elif event.key == pygame.K_n:
-                    print("⛔ Player declined weapon.")
                     wave_manager.awaiting_weapon_choice = False
                     wave_manager.weapon_prompt_ready = False
-
-
 
     if not wave_manager.game_over and not wave_manager.awaiting_weapon_choice:
         player.update(player_speed["value"], screen)
         player.draw(screen)
         wave_manager.update(player, screen)
+
+
+
+        for bullet in enemy_bullets[:]:
+            bullet.update()
+            bullet.draw(screen)
+            if not screen.get_rect().contains(bullet.rect):
+                enemy_bullets.remove(bullet)
 
         wave_text = ui_font.render(f"Wave: {wave_manager.wave}", True, (255, 255, 255))
         screen.blit(wave_text, (800 - wave_text.get_width() - 10, 10))
