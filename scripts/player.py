@@ -59,10 +59,11 @@ class Player(pygame.sprite.Sprite):
         if dx != 0 or dy != 0:
             now = pygame.time.get_ticks()
             if now - self.last_shot >= self.shoot_delay / self.perks.shoot_speed_multiplier:
-                angle = math.atan2(dy, dx)
+                direction = (dx, dy)
                 speed = 10
-                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed))
+                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, direction, speed))
                 self.last_shot = now
+
 
     def shoot(self, bullets_group):
         mx, my = pygame.mouse.get_pos()
@@ -82,6 +83,7 @@ class Player(pygame.sprite.Sprite):
 
     def take_damage(self, amount):
         self.health -= amount
+        print(f"Player took {amount} damage. Health is now {self.health}")
         if self.health <= 0:
             print("Player died")
             self.health = 0

@@ -14,7 +14,7 @@ player_group = pygame.sprite.Group(player)
 player_bullets = pygame.sprite.Group()
 
 # Wave manager
-wave_manager = WaveManager(screen.get_rect(), player)
+wave_manager = WaveManager(screen.get_rect(), player, player_bullets)
 
 running = True
 while running:

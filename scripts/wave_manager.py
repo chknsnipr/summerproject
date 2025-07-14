@@ -1,6 +1,8 @@
 import pygame
 import random
 from scripts.enemy import Enemy, TankEnemy, BossEnemy, EnemyBullet
+from scripts.player import Player
+from scripts.bullet import Bullet
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center):
@@ -20,20 +22,25 @@ class Explosion(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
 
 class WaveManager:
-    def __init__(self, screen_rect, player):
-        self.screen_rect = screen_rect
-        self.player = player
-        self.enemies = pygame.sprite.Group()
-        self.enemy_bullets = pygame.sprite.Group()
-        self.explosions = pygame.sprite.Group()
-        self.wave_number = 0
-        self.spawn_index = 0
-        self.last_spawn = pygame.time.get_ticks()
-        self.spawn_delay = 500
-        self.wave_in_progress = False
-        self.next_wave_timer = 0
-        self.enemies_to_spawn = []
-        self.start_next_wave()
+    def __init__(self, screen_rect, player: Player, player_bullets):
+            self.screen_rect = screen_rect
+            self.player = player
+            self.player_bullets = player_bullets  # ✅ Added bullet group reference
+
+            self.enemies = pygame.sprite.Group()
+            self.enemy_bullets = pygame.sprite.Group()
+            self.explosions = pygame.sprite.Group()
+
+            self.wave_number = 0
+            self.spawn_index = 0
+            self.last_spawn = pygame.time.get_ticks()
+            self.spawn_delay = 200
+            self.wave_in_progress = False
+            self.next_wave_timer = 0
+            self.enemies_to_spawn = []
+
+            self.start_next_wave()
+            self.player_bullets = player_bullets  # ✅ this fixes the error
 
     def start_next_wave(self):
         self.wave_number += 1
@@ -44,7 +51,7 @@ class WaveManager:
         if self.wave_number % 5 == 0:
             self.enemies_to_spawn.append(("boss", 1))
         else:
-            for _ in range(self.wave_number * 2):
+            for _ in range(self.wave_number * 4):
                 self.enemies_to_spawn.append((random.choice(["normal", "tank"]), 1))
 
     def spawn_enemy(self, enemy_type):
@@ -72,7 +79,7 @@ class WaveManager:
 
         elif self.wave_in_progress and not self.enemies:
             self.wave_in_progress = False
-            self.next_wave_timer = now + 3000
+            self.next_wave_timer = now + 1000
 
         elif not self.wave_in_progress and now >= self.next_wave_timer:
             self.start_next_wave()
@@ -87,11 +94,19 @@ class WaveManager:
 
         for enemy in pygame.sprite.spritecollide(self.player, self.enemies, False):
             self.player.take_damage(enemy.damage)
+            self.explosions.add(Explosion(enemy.rect.center))  # 💥 Show explosion
+            enemy.kill()  # 💀 Remove enemy after hitting player
 
         for enemy in list(self.enemies):
             if hasattr(enemy, 'health') and enemy.health <= 0:
                 self.explosions.add(Explosion(enemy.rect.center))
                 enemy.kill()
+        # ✅ Player bullets → Enemies
+        for bullet in self.player_bullets:
+            hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
+            for enemy in hits:
+                enemy.health -= bullet.damage
+                bullet.kill()
 
     def draw(self, surface):
         self.enemies.draw(surface)

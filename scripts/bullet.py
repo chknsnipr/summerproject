@@ -1,20 +1,30 @@
 import pygame
 import math
 
-class Bullet:
-    def __init__(self, x, y, direction, speed=8, damage=1, spread=0):
-        self.rect = pygame.Rect(x, y, 6, 6)
-        self.color = (255, 255, 0)
-        self.speed = speed
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction, speed, damage=10):
+        super().__init__()
+        self.image = pygame.Surface((6, 6))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect(center=(x, y))
         self.damage = damage
+        # Normalize the direction vector and multiply by speed
+        if isinstance(direction, pygame.math.Vector2):
+            if direction.length() != 0:
+                self.velocity = direction.normalize() * speed
+            else:
+                self.velocity = pygame.math.Vector2(0, 0)
+        else:
+            # fallback if you pass (dx, dy)
+            dx, dy = direction
+            vec = pygame.math.Vector2(dx, dy)
+            if vec.length() != 0:
+                self.velocity = vec.normalize() * speed
+            else:
+                self.velocity = pygame.math.Vector2(0, 0)
 
-        # Apply spread to direction (used for shotgun)
-        angle = math.atan2(direction[1], direction[0]) + spread
-        self.direction = (math.cos(angle), math.sin(angle))
+     
 
     def update(self):
-        self.rect.x += int(self.direction[0] * self.speed)
-        self.rect.y += int(self.direction[1] * self.speed)
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect)
+        self.rect.x += self.velocity.x
+        self.rect.y += self.velocity.y

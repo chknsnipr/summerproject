@@ -9,7 +9,8 @@ class Enemy(pygame.sprite.Sprite):
         self.image.fill((255, 255, 0))
         self.rect = self.image.get_rect(center=(x, y))
         self.health = health
-        self.damage = damage
+        self.damage=damage 
+
 
     def update(self, player):
         dx = player.rect.centerx - self.rect.centerx
@@ -25,7 +26,7 @@ class EnemyBullet(pygame.sprite.Sprite):
         self.image.fill((255, 50, 50))
         self.rect = self.image.get_rect(center=(x, y))
         self.velocity = pygame.math.Vector2(dx, dy)
-        self.damage = damage
+        self.damage = 20
 
     def update(self):
         self.rect.x += self.velocity.x
@@ -38,6 +39,8 @@ class TankEnemy(Enemy):
         self.wave_manager = wave_manager
         self.last_shot = pygame.time.get_ticks()
         self.shoot_delay = 1000
+        self.damage = 10  # or whatever value
+        self.health=20
 
     def update(self, player):
         super().update(player)
@@ -46,7 +49,7 @@ class TankEnemy(Enemy):
             dx = player.rect.centerx - self.rect.centerx
             dy = player.rect.centery - self.rect.centery
             dist = max(math.hypot(dx, dy), 0.01)
-            speed = 6
+            speed = 30
             vx, vy = dx / dist * speed, dy / dist * speed
             bullet = EnemyBullet(self.rect.centerx, self.rect.centery, vx, vy, damage=5)
             self.wave_manager.enemy_bullets.add(bullet)
@@ -63,6 +66,9 @@ class BossEnemy(Enemy):
         self.special_cooldown = 3000
         self.special_width = 50
         self.special_damage = 6
+        self.damage = 10  # or whatever value
+        self.health=100
+
 
     def update(self, player):
         super().update(player)
@@ -73,7 +79,7 @@ class BossEnemy(Enemy):
             dx = player.rect.centerx - self.rect.centerx
             dy = player.rect.centery - self.rect.centery
             dist = max(math.hypot(dx, dy), 0.01)
-            speed = 7
+            speed = 10
             bullet = EnemyBullet(self.rect.centerx, self.rect.centery, dx / dist * speed, dy / dist * speed, damage=10)
             self.wave_manager.enemy_bullets.add(bullet)
             self.last_shot = now
