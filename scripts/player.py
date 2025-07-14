@@ -1,99 +1,90 @@
 import pygame
+import math
 from scripts.bullet import Bullet
-import random
 
-class Player:
+class Player(pygame.sprite.Sprite):
     class PerkMods:
         def __init__(self):
             self.tank_damage_bonus = 0.0
             self.boss_damage_bonus = 0.0
             self.shoot_speed_multiplier = 1.0
             self.speed_multiplier = 1.0
-            self.extra_explosions = 0
-            self.health_per_wave = 3
+            self.healing_bonus = 0
 
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 32, 32)
-        self.color = (0, 255, 0)
-        self.bullets = []
-        self.health = 10
-        self.shoot_cooldown = 1
-        self.can_explode = True
-        self.trigger_explosion = False
-        self.perk_mods = Player.PerkMods()
+        super().__init__()
+        self.image = pygame.Surface((40, 40))
+        self.image.fill((0, 200, 0))
+        self.rect = self.image.get_rect(center=(x, y))
+
+        self.base_speed = 5
+        self.health = 100
+        self.max_health = 100
+
+        self.last_shot = pygame.time.get_ticks()
+        self.shoot_delay = 500
         self.weapon = "pistol"
 
-    def handle_input(self, speed):
+        self.perks = self.PerkMods()
+        self.velocity = pygame.math.Vector2()
+
+    def update(self, bullets_group):
+        self.handle_movement()
+        self.handle_shooting(bullets_group)
+
+    def handle_movement(self):
         keys = pygame.key.get_pressed()
-        adjusted_speed = speed * self.perk_mods.speed_multiplier
-        if keys[pygame.K_w]: self.rect.y -= adjusted_speed
-        if keys[pygame.K_s]: self.rect.y += adjusted_speed
-        if keys[pygame.K_a]: self.rect.x -= adjusted_speed
-        if keys[pygame.K_d]: self.rect.x += adjusted_speed
+        self.velocity.x = keys[pygame.K_d] - keys[pygame.K_a]
+        self.velocity.y = keys[pygame.K_s] - keys[pygame.K_w]
 
-        self.rect.clamp_ip(pygame.Rect(0, 0, 800, 600))
+        if self.velocity.length_squared() > 0:
+            self.velocity = self.velocity.normalize()
 
-    def shoot(self):
+        speed = self.base_speed * self.perks.speed_multiplier
+        self.rect.x += self.velocity.x * speed
+        self.rect.y += self.velocity.y * speed
+
+        # 🧱 Clamp inside screen bounds (800x600)
+        screen_width, screen_height = 800, 600  # Or make dynamic from screen.get_size()
+        self.rect.left = max(0, self.rect.left)
+        self.rect.right = min(screen_width, self.rect.right)
+        self.rect.top = max(0, self.rect.top)
+        self.rect.bottom = min(screen_height, self.rect.bottom)
+
+    def handle_shooting(self, bullets_group):
         keys = pygame.key.get_pressed()
-        direction = None
-        if keys[pygame.K_UP]: direction = (0, -1)
-        elif keys[pygame.K_DOWN]: direction = (0, 1)
-        elif keys[pygame.K_LEFT]: direction = (-1, 0)
-        elif keys[pygame.K_RIGHT]: direction = (1, 0)
+        dx = keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]
+        dy = keys[pygame.K_DOWN] - keys[pygame.K_UP]
 
-        if direction and self.shoot_cooldown <= 0:
-            if self.weapon == "pistol":
-                self.bullets.append(Bullet(self.rect.centerx, self.rect.centery, direction, speed=8, damage=1))
-                self.shoot_cooldown = 10 * self.perk_mods.shoot_speed_multiplier
-            elif self.weapon == "sniper":
-                self.bullets.append(Bullet(self.rect.centerx, self.rect.centery, direction, speed=20, damage=8))
-                self.shoot_cooldown = 60
-            elif self.weapon == "smg":
-                self.bullets.append(Bullet(self.rect.centerx, self.rect.centery, direction, speed=10, damage=0.4))
-                self.shoot_cooldown = 4
-            elif self.weapon == "shotgun":
-                for angle in [-0.2, -0.1, 0, 0.1, 0.2]:
-                    self.bullets.append(Bullet(self.rect.centerx, self.rect.centery, direction, speed=6, damage=0.7, spread=angle))
-                self.shoot_cooldown = 20
+        if dx != 0 or dy != 0:
+            now = pygame.time.get_ticks()
+            if now - self.last_shot >= self.shoot_delay / self.perks.shoot_speed_multiplier:
+                angle = math.atan2(dy, dx)
+                speed = 10
+                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed))
+                self.last_shot = now
 
-    def update(self, speed, screen):
-        self.handle_input(speed)
-        self.shoot()
-        self.update_bullets(screen)
-        self.handle_explosion()
-        if self.shoot_cooldown > 0:
-            self.shoot_cooldown -= 1
+    def shoot(self, bullets_group):
+        mx, my = pygame.mouse.get_pos()
+        angle = math.atan2(my - self.rect.centery, mx - self.rect.centerx)
+        speed = 10
 
-    def update_bullets(self, screen):
-        for bullet in self.bullets[:]:
-            bullet.update()
-            bullet.draw(screen)
-            if not screen.get_rect().contains(bullet.rect):
-                self.bullets.remove(bullet)
+        if self.weapon == "pistol":
+            bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed))
+        elif self.weapon == "shotgun":
+            for offset in [-0.2, -0.1, 0, 0.1, 0.2]:
+                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle + offset, speed))
+        elif self.weapon == "sniper":
+            bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed * 1.5, damage=30))
+        elif self.weapon == "smg":
+            for _ in range(2):
+                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed))
 
-    def handle_explosion(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_q] and self.can_explode:
-            self.trigger_explosion = True
-            self.can_explode = False
+    def take_damage(self, amount):
+        self.health -= amount
+        if self.health <= 0:
+            print("Player died")
+            self.health = 0
 
-    def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
-        font = pygame.font.SysFont("Arial", 20)
-        bar_width, bar_height = 60, 10
-        x, y = 10, 10
-
-        pygame.draw.rect(surface, (255, 0, 0), (x, y, bar_width, bar_height))
-        pygame.draw.rect(surface, (0, 255, 0), (x, y, int(bar_width * self.health / 10), bar_height))
-
-        surface.blit(font.render(f"Health: {self.health}/10", True, (255, 255, 255)), (x, y + bar_height + 5))
-
-        status_text = "Explosion: READY" if self.can_explode else "Explosion: USED"
-        status_color = (0, 255, 0) if self.can_explode else (255, 0, 0)
-        surface.blit(font.render(status_text, True, status_color), (x, y + 30))
-
-        weapon_text = font.render(f"Weapon: {self.weapon.upper()}", True, (0, 200, 255))
-        surface.blit(weapon_text, (x, y + 55))
-
-    def apply_perk(self, rarity):
-        pass  # already defined in earlier version
+    def heal(self, amount):
+        self.health = min(self.health + amount + self.perks.healing_bonus, self.max_health)

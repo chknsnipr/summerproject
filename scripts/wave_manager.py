@@ -1,124 +1,99 @@
-
 import pygame
 import random
-from scripts.enemy import ScoutEnemy, TankEnemy, NormalEnemy, BossHelper, BossEnemy
-from scripts.game_state import player_speed
-from scripts.enemy import Explosion
-from scripts.perk import PERK_TYPES, Perk
+from scripts.enemy import Enemy, TankEnemy, BossEnemy, EnemyBullet
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, center):
+        super().__init__()
+        self.radius = 30
+        self.image = pygame.Surface((60, 60), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, (255, 165, 0, 128), (30, 30), 30)
+        self.rect = self.image.get_rect(center=center)
+
+    def update(self):
+        self.radius -= 1
+        if self.radius <= 0:
+            self.kill()
+        else:
+            self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (255, 165, 0, 128), (self.radius, self.radius), self.radius)
+            self.rect = self.image.get_rect(center=self.rect.center)
 
 class WaveManager:
-    def __init__(self):
-        self.enemies = []
-        self.wave = 0
-        self.boss_spawned = False
-        self.game_over = False
-        self.explosions = []
-        self.boss = None
-        self.last_helper_spawn = 0
-        self.awaiting_weapon_choice = False
-        self.weapon_offer = None
-        self.weapon_prompt_ready = False
-        self.enemy_bullets = []
-        self.perks = []
+    def __init__(self, screen_rect, player):
+        self.screen_rect = screen_rect
+        self.player = player
+        self.enemies = pygame.sprite.Group()
+        self.enemy_bullets = pygame.sprite.Group()
+        self.explosions = pygame.sprite.Group()
+        self.wave_number = 0
+        self.spawn_index = 0
+        self.last_spawn = pygame.time.get_ticks()
+        self.spawn_delay = 500
+        self.wave_in_progress = False
+        self.next_wave_timer = 0
+        self.enemies_to_spawn = []
+        self.start_next_wave()
 
+    def start_next_wave(self):
+        self.wave_number += 1
+        self.enemies_to_spawn = []
+        self.spawn_index = 0
+        self.wave_in_progress = True
 
+        if self.wave_number % 5 == 0:
+            self.enemies_to_spawn.append(("boss", 1))
+        else:
+            for _ in range(self.wave_number * 2):
+                self.enemies_to_spawn.append((random.choice(["normal", "tank"]), 1))
 
-    def spawn_wave(self):
-        for _ in range(5 + self.wave):
-            x, y = random.randint(0, 800), random.randint(0, 600)
-            self.enemies.append(random.choice([ScoutEnemy, NormalEnemy, TankEnemy])(x, y))
+    def spawn_enemy(self, enemy_type):
+        x = random.randint(50, self.screen_rect.width - 50)
+        y = random.randint(50, self.screen_rect.height // 3)
+        if enemy_type == "normal":
+            enemy = Enemy(x, y)
+        elif enemy_type == "tank":
+            enemy = TankEnemy(x, y, self)
+        elif enemy_type == "boss":
+            enemy = BossEnemy(x, y, self)
+        self.enemies.add(enemy)
 
-    def spawn_boss(self):
-        self.boss = BossEnemy(400, 300)
-        self.enemies.append(self.boss)
-        self.last_helper_spawn = pygame.time.get_ticks()
+    def update(self):
+        now = pygame.time.get_ticks()
 
-    def handle_explosion(self, player):
-        if not player.trigger_explosion:
-            return
-        player.trigger_explosion = False
-        self.explosions.append(Explosion(player.rect.centerx, player.rect.centery))
+        # Spawn handling
+        if self.wave_in_progress and self.spawn_index < len(self.enemies_to_spawn):
+            if now - self.last_spawn >= self.spawn_delay:
+                kind, count = self.enemies_to_spawn[self.spawn_index]
+                for _ in range(count):
+                    self.spawn_enemy(kind)
+                self.spawn_index += 1
+                self.last_spawn = now
 
-        for enemy in self.enemies[:]:
-            dist = ((player.rect.centerx - enemy.rect.centerx) ** 2 + (player.rect.centery - enemy.rect.centery) ** 2) ** 0.5
-            if dist <= 150:
-                damage = 5
-                if isinstance(enemy, TankEnemy):
-                    damage *= (1 + player.perk_mods.tank_damage_bonus)
-                if enemy.take_damage(damage):
-                    self.enemies.remove(enemy)
-                    self.try_drop_weapon()
-                       # Attempt to drop a perk
-                    if random.random() < 0.35:  # 35% chance to drop a perk
-                        tier = random.choices(["common", "normal", "rare"], weights=[60, 30, 10])[0]
-                        perk_data = random.choice(PERK_TYPES[tier]["perks"])
-                        perk = Perk(enemy.rect.centerx, enemy.rect.centery, tier, perk_data)
-                        self.perks.append(perk)
-                        print(f"💠 Dropped perk: {perk.name} ({tier})")
+        elif self.wave_in_progress and not self.enemies:
+            self.wave_in_progress = False
+            self.next_wave_timer = now + 3000
 
-    def try_drop_weapon(self):
-        if not self.awaiting_weapon_choice and random.random() < 0.3:
-            self.weapon_offer = random.choice(["shotgun", "sniper", "smg"])
-            self.awaiting_weapon_choice = True
+        elif not self.wave_in_progress and now >= self.next_wave_timer:
+            self.start_next_wave()
 
-    def draw_explosions(self, screen):
-        for explosion in self.explosions[:]:
-            if explosion.update():
-                explosion.draw(screen)
-            else:
-                self.explosions.remove(explosion)
+        self.enemies.update(self.player)
+        self.enemy_bullets.update()
+        self.explosions.update()
 
+        # Collisions
+        for bullet in pygame.sprite.spritecollide(self.player, self.enemy_bullets, True):
+            self.player.take_damage(bullet.damage)
 
-    def update(self, player, screen):
-        if self.game_over:
-            return
+        for enemy in pygame.sprite.spritecollide(self.player, self.enemies, False):
+            self.player.take_damage(enemy.damage)
 
-        self.handle_explosion(player)
-        for enemy in self.enemies[:]:
-            enemy.update(player, self.enemy_bullets, self.explosions)
+        for enemy in list(self.enemies):
+            if hasattr(enemy, 'health') and enemy.health <= 0:
+                self.explosions.add(Explosion(enemy.rect.center))
+                enemy.kill()
 
-            enemy.draw(screen)
-            if enemy.rect.colliderect(player.rect):
-                player.health -= enemy.collision_damage
-                player.health = max(0, player.health)
-                self.enemies.remove(enemy)
-                if player.health <= 0:
-                    self.game_over = True
-                    return
-
-            for bullet in player.bullets[:]:
-                if enemy.rect.colliderect(bullet.rect):
-                    player.bullets.remove(bullet)
-                    damage = {"shotgun": .7, "sniper": 9, "smg": 0.4}.get(player.weapon, 1)
-                    if isinstance(enemy, BossEnemy):
-                        damage *= (1 + player.perk_mods.boss_damage_bonus)
-                    if enemy.take_damage(damage):
-                        self.enemies.remove(enemy)
-                    break
-
-        self.draw_explosions(screen)
-        for bullet in self.enemy_bullets[:]:
-            bullet.update()
-            bullet.draw(screen)
-            if bullet.rect.colliderect(player.rect):
-                player.health -= bullet.damage
-                self.enemy_bullets.remove(bullet)
-                if player.health <= 0:
-                    self.game_over = True
-                    return
-
-        if self.boss and self.boss in self.enemies:
-            if pygame.time.get_ticks() - self.last_helper_spawn > 2000:
-                self.enemies.append(BossHelper(random.randint(0, 800), random.randint(0, 600), self.boss))
-                self.last_helper_spawn = pygame.time.get_ticks()
-
-        if not self.enemies:
-            self.wave += 1
-            player_speed["value"] = min(player_speed["value"] + 0.2, 8.0)
-            player.can_explode = True
-            player.health = min(player.health + player.perk_mods.health_per_wave, 10)
-            if self.wave < 5:
-                self.spawn_wave()
-            elif self.wave == 5 and not self.boss_spawned:
-                self.spawn_boss()
-                self.boss_spawned = True
+    def draw(self, surface):
+        self.enemies.draw(surface)
+        self.enemy_bullets.draw(surface)
+        self.explosions.draw(surface)
