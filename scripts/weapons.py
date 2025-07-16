@@ -41,8 +41,7 @@ class Sniper(Weapon):
         if keys[pygame.K_SPACE] and self.cooldown <= 0:
             bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, (0, -1), speed=15, range=800, damage=8)
             self.player.bullets.append(bullet)
-            self.cooldown = 60  # Longer delay
-
+            self.cooldown = 60 
 
 class SMG(Weapon):
     def __init__(self, player):
@@ -53,4 +52,4 @@ class SMG(Weapon):
         if keys[pygame.K_SPACE] and self.cooldown <= 0:
             bullet = Bullet(self.player.rect.centerx, self.player.rect.centery, (0, -1), speed=6, range=200, damage=0.4)
             self.player.bullets.append(bullet)
-            self.cooldown = 4  # Very fast
+            self.cooldown = 4 

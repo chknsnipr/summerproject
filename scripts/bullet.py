@@ -8,14 +8,14 @@ class Bullet(pygame.sprite.Sprite):
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect(center=(x, y))
         self.damage = damage
-        # Normalize the direction vector and multiply by speed
+       
         if isinstance(direction, pygame.math.Vector2):
             if direction.length() != 0:
                 self.velocity = direction.normalize() * speed
             else:
                 self.velocity = pygame.math.Vector2(0, 0)
         else:
-            # fallback if you pass (dx, dy)
+      
             dx, dy = direction
             vec = pygame.math.Vector2(dx, dy)
             if vec.length() != 0:

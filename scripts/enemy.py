@@ -3,21 +3,23 @@ import pygame
 import math
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, image=None, health=1, damage=10):
+    def __init__(self, x, y, image=None, health=40, damage=10,speed=3.0):
         super().__init__()
         self.image = image if image else pygame.Surface((30, 30))
         self.image.fill((255, 255, 0))
         self.rect = self.image.get_rect(center=(x, y))
         self.health = health
         self.damage=damage 
-
+        self.max_health = self.health  # for correct bar scaling
+        self.speed=speed
 
     def update(self, player):
         dx = player.rect.centerx - self.rect.centerx
         dy = player.rect.centery - self.rect.centery
         dist = max(math.hypot(dx, dy), 0.01)
-        self.rect.x += int(2 * dx / dist)
-        self.rect.y += int(2 * dy / dist)
+        self.rect.x += int(self.speed * dx / dist)
+        self.rect.y += int(self.speed * dy / dist)
+
 
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy, damage=5):
@@ -26,7 +28,7 @@ class EnemyBullet(pygame.sprite.Sprite):
         self.image.fill((255, 50, 50))
         self.rect = self.image.get_rect(center=(x, y))
         self.velocity = pygame.math.Vector2(dx, dy)
-        self.damage = 20
+        self.damage = 15
 
     def update(self):
         self.rect.x += self.velocity.x
@@ -40,7 +42,8 @@ class TankEnemy(Enemy):
         self.last_shot = pygame.time.get_ticks()
         self.shoot_delay = 1000
         self.damage = 10  # or whatever value
-        self.health=20
+        self.health=10
+        self.max_health = self.health  # for correct bar scaling
 
     def update(self, player):
         super().update(player)
@@ -49,7 +52,7 @@ class TankEnemy(Enemy):
             dx = player.rect.centerx - self.rect.centerx
             dy = player.rect.centery - self.rect.centery
             dist = max(math.hypot(dx, dy), 0.01)
-            speed = 30
+            speed = 10
             vx, vy = dx / dist * speed, dy / dist * speed
             bullet = EnemyBullet(self.rect.centerx, self.rect.centery, vx, vy, damage=5)
             self.wave_manager.enemy_bullets.add(bullet)
@@ -68,6 +71,8 @@ class BossEnemy(Enemy):
         self.special_damage = 6
         self.damage = 10  # or whatever value
         self.health=100
+        self.max_health = self.health  # for correct bar scaling
+
 
 
     def update(self, player):
@@ -89,3 +94,13 @@ class BossEnemy(Enemy):
             if abs(player.rect.centerx - self.rect.centerx) == abs(player.rect.centery - self.rect.centery):
                 player.take_damage(self.special_damage)
             self.last_special_attack = now
+    def draw_health_bar(self, surface):
+        if self.health <= 0:
+            return
+        bar_width = self.rect.width
+        bar_height = 5
+        fill = (self.health / self.max_health) * bar_width
+        outline_rect = pygame.Rect(self.rect.x, self.rect.y - 10, bar_width, bar_height)
+        fill_rect = pygame.Rect(self.rect.x, self.rect.y - 10, fill, bar_height)
+        pygame.draw.rect(surface, (255, 0, 0), fill_rect)
+        pygame.draw.rect(surface, (255, 255, 255), outline_rect, 1)

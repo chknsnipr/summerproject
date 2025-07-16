@@ -14,19 +14,22 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.Surface((40, 40))
-        self.image.fill((0, 200, 0))
+        self.image.fill((0, 0, 255))
         self.rect = self.image.get_rect(center=(x, y))
 
         self.base_speed = 5
         self.health = 100
         self.max_health = 100
+    
 
         self.last_shot = pygame.time.get_ticks()
-        self.shoot_delay = 500
+        self.shoot_delay = 250
         self.weapon = "pistol"
+        self.perk_mods = Player.PerkMods()  
 
         self.perks = self.PerkMods()
         self.velocity = pygame.math.Vector2()
+        self.perk_names = []
 
     def update(self, bullets_group):
         self.handle_movement()
@@ -44,8 +47,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += self.velocity.x * speed
         self.rect.y += self.velocity.y * speed
 
-        # 🧱 Clamp inside screen bounds (800x600)
-        screen_width, screen_height = 800, 600  # Or make dynamic from screen.get_size()
+        screen_width, screen_height = 800, 600 
         self.rect.left = max(0, self.rect.left)
         self.rect.right = min(screen_width, self.rect.right)
         self.rect.top = max(0, self.rect.top)
@@ -59,16 +61,16 @@ class Player(pygame.sprite.Sprite):
         if dx != 0 or dy != 0:
             now = pygame.time.get_ticks()
             if now - self.last_shot >= self.shoot_delay / self.perks.shoot_speed_multiplier:
-                direction = (dx, dy)
+                direction = pygame.math.Vector2(dx, dy).normalize()
                 speed = 10
-                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, direction, speed))
+                bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, (direction.x, direction.y), speed))
                 self.last_shot = now
 
 
     def shoot(self, bullets_group):
         mx, my = pygame.mouse.get_pos()
         angle = math.atan2(my - self.rect.centery, mx - self.rect.centerx)
-        speed = 10
+        speed = 15
 
         if self.weapon == "pistol":
             bullets_group.add(Bullet(self.rect.centerx, self.rect.centery, angle, speed))

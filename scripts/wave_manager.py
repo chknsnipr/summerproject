@@ -25,7 +25,7 @@ class WaveManager:
     def __init__(self, screen_rect, player: Player, player_bullets):
             self.screen_rect = screen_rect
             self.player = player
-            self.player_bullets = player_bullets  # ✅ Added bullet group reference
+            self.player_bullets = player_bullets  
 
             self.enemies = pygame.sprite.Group()
             self.enemy_bullets = pygame.sprite.Group()
@@ -40,8 +40,7 @@ class WaveManager:
             self.enemies_to_spawn = []
 
             self.start_next_wave()
-            self.player_bullets = player_bullets  # ✅ this fixes the error
-
+            self.player_bullets = player_bullets 
     def start_next_wave(self):
         self.wave_number += 1
         self.enemies_to_spawn = []
@@ -51,7 +50,7 @@ class WaveManager:
         if self.wave_number % 5 == 0:
             self.enemies_to_spawn.append(("boss", 1))
         else:
-            for _ in range(self.wave_number * 4):
+            for _ in range(self.wave_number * 8):
                 self.enemies_to_spawn.append((random.choice(["normal", "tank"]), 1))
 
     def spawn_enemy(self, enemy_type):
@@ -94,14 +93,14 @@ class WaveManager:
 
         for enemy in pygame.sprite.spritecollide(self.player, self.enemies, False):
             self.player.take_damage(enemy.damage)
-            self.explosions.add(Explosion(enemy.rect.center))  # 💥 Show explosion
-            enemy.kill()  # 💀 Remove enemy after hitting player
+            self.explosions.add(Explosion(enemy.rect.center)) 
+            enemy.kill
 
         for enemy in list(self.enemies):
             if hasattr(enemy, 'health') and enemy.health <= 0:
                 self.explosions.add(Explosion(enemy.rect.center))
                 enemy.kill()
-        # ✅ Player bullets → Enemies
+      
         for bullet in self.player_bullets:
             hits = pygame.sprite.spritecollide(bullet, self.enemies, False)
             for enemy in hits:
@@ -109,6 +108,13 @@ class WaveManager:
                 bullet.kill()
 
     def draw(self, surface):
-        self.enemies.draw(surface)
+  
         self.enemy_bullets.draw(surface)
         self.explosions.draw(surface)
+
+       
+        for enemy in self.enemies:
+            surface.blit(enemy.image, enemy.rect)
+            if hasattr(enemy, 'draw_health_bar'):
+                enemy.draw_health_bar(surface)
+
